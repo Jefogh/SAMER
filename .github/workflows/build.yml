@@ -97,7 +97,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install buildozer cython==0.29.33
-          pip install opencv-python-headless numpy httpx easyocr
+          pip install opencv-python-headless numpy httpx tensorflow keras-ocr
 
       # Clean previous builds to avoid conflicts
       - name: Clean previous builds
