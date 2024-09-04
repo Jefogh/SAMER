@@ -18,6 +18,9 @@ source.include_exts = py,png,jpg,kv,atlas,json
 # (list) List of inclusions using pattern matching
 source.include_patterns = images/*.png,images/*.jpg,*.json
 
+# (str) Application versioning (method 1)
+version = 1.0.0
+
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
 requirements = python3,kivy==2.3.0,kivymd==1.1.1,pillow==10.3.0,opencv-python-headless,numpy,httpx,easyocr
