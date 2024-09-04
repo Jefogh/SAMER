@@ -33,7 +33,6 @@ jobs:
           path: .buildozer
           key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
 
-      # Install dependencies
       - name: Install dependencies
         run: |
           sudo apt update
@@ -79,46 +78,39 @@ jobs:
             libssl-dev \
             automake
 
-      # Set up Java 17 required by Gradle
-      - name: Setup Java 17 required by Gradle
+      - name: Set up Java 17 required by Gradle
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # Set up Python
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.8'
 
-      # Install pip dependencies
       - name: Install pip dependencies
         run: |
           pip install --upgrade pip
           pip install buildozer cython==0.29.33
           pip install opencv-python-headless numpy httpx tensorflow keras-ocr
 
-      # Clean previous builds to avoid conflicts
       - name: Clean previous builds
-        run: buildozer android clean
+        run: buildozer android clean || echo "Failed to clean, continuing..."
 
-      # Build with Buildozer and save logs
       - name: Build with Buildozer
         run: |
           yes | buildozer -v android debug 2>&1 | tee build.log
 
-      # Upload the APK artifact
       - name: Upload APK artifact
         uses: actions/upload-artifact@v2
         with:
           name: APK
           path: bin/*.apk
 
-      # Upload Build Log if the build fails
       - name: Upload Build Log
         if: failure()
         uses: actions/upload-artifact@v2
         with:
           name: build-log
-          path: build.log
+          path: build.log || echo "No build log found, skipping upload"
