@@ -1,14 +1,13 @@
+import os
 import base64
-import random
-import time
-import threading
-import httpx
 import cv2
 import numpy as np
-import easyocr
+import keras_ocr
+import threading
+import httpx
+import time
 import re
 import json
-import os
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -21,11 +20,10 @@ from kivy.uix.filechooser import FileChooserListView
 from kivy.uix.popup import Popup
 from kivy.uix.gridlayout import GridLayout
 from kivy.clock import Clock
-from kivy.core.window import Window
 from kivy.graphics.texture import Texture
 
-# Initialize EasyOCR reader
-reader = easyocr.Reader(['en'], gpu=False, model_storage_directory=os.path.join(os.getcwd(), "model"), download_enabled=True)
+# Initialize Keras OCR pipeline
+pipeline = keras_ocr.pipeline.Pipeline()
 
 class CaptchaApp(BoxLayout):
     def __init__(self, **kwargs):
@@ -248,15 +246,12 @@ class CaptchaApp(BoxLayout):
             popup = Popup(title='Captcha', content=captcha_layout, size_hint=(0.8, 0.8))
             popup.open()
 
-            # Now perform OCR processing
-            img_array = np.array(processed_image)
-            
-            # تحسين الأداء من خلال تحديد أقصى عدد للأحرف المراد التعرف عليها
-            predictions = reader.readtext(img_array, detail=0, allowlist='0123456789+-*/')
+            # Now perform OCR processing with Keras OCR
+            predictions = pipeline.recognize([processed_image])[0]
 
-            # Correct the OCR output with our custom function
-            corrected_text, _ = self.correct_and_highlight(predictions, img_array)
+            corrected_text = self.correct_and_highlight(predictions)
 
+            # حل الكابتشا بناءً على النص المستخرج
             captcha_solution = self.solve_captcha(corrected_text)
 
             # Update the entry with OCR result
@@ -375,8 +370,8 @@ class CaptchaApp(BoxLayout):
         
         return random.choice(user_agent_list)
 
-    def correct_and_highlight(self, predictions, image):
-        """Correct OCR predictions and apply color highlights to numbers and operators."""
+    def correct_and_highlight(self, predictions):
+        """Correct OCR predictions and apply corrections."""
         corrections = {
             'O': '0', 'S': '5', 'I': '1', 'B': '8', 'G': '6',
             'Z': '2', 'T': '7', 'A': '4', 'X': '*', '×': '*', 'L': '1',
@@ -385,13 +380,13 @@ class CaptchaApp(BoxLayout):
 
         corrected_text = ""
         
-        for text in predictions:
+        for box, text in predictions:
             text = text.strip().upper()
             for char in text:
                 corrected_char = corrections.get(char, char)
                 corrected_text += corrected_char
 
-        return corrected_text, image
+        return corrected_text
 
     def save_corrections(self):
         """Save corrections to a file."""
