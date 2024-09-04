@@ -1,114 +1,124 @@
-[app]
+name: CI
 
-# (str) Title of your application
-title = My Captcha Solver
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
-# (str) Package name
-package.name = mycaptchasolver
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-# (str) Package domain (needed for android/ios packaging)
-package.domain = org.test
+    steps:
+      - uses: actions/checkout@v2
 
-# (str) Source code where the main.py lives
-source.dir = .
+      # Use caching to speed up builds
+      - name: Get Date
+        id: get-date
+        run: |
+          echo "::set-output name=date::$(/bin/date -u "+%Y%m%d")"
+        shell: bash
 
-# (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,kv,atlas,json
+      - name: Cache Buildozer global directory
+        uses: actions/cache@v2
+        with:
+          path: .buildozer_global
+          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
 
-# (list) List of inclusions using pattern matching
-source.include_patterns = images/*.png,images/*.jpg,*.json
+      - uses: actions/cache@v2
+        with:
+          path: .buildozer
+          key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
 
-# (str) Application versioning (method 1)
-version = 1.0.0
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt-get install -y \
+            build-essential \
+            git \
+            ffmpeg \
+            libsdl2-dev \
+            libsdl2-image-dev \
+            libsdl2-mixer-dev \
+            libsdl2-ttf-dev \
+            libportmidi-dev \
+            libswscale-dev \
+            libavformat-dev \
+            libavcodec-dev \
+            libunwind-dev \
+            zlib1g-dev \
+            libopencv-dev \
+            libtesseract-dev \
+            libleptonica-dev \
+            tesseract-ocr \
+            zlib1g-dev \
+            openssl \
+            libgdbm-dev \
+            libgdbm-compat-dev \
+            liblzma-dev \
+            libreadline-dev \
+            uuid-dev \
+            libgstreamer1.0 \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good
+          sudo apt-get install -y \
+            zip \
+            unzip \
+            autoconf \
+            libtool \
+            pkg-config \
+            libncurses5-dev \
+            libncursesw5-dev \
+            libtinfo5 \
+            cmake \
+            libffi-dev \
+            libssl-dev \
+            automake
 
-# (list) Application requirements
-# تحديد المكتبات الضرورية فقط لتقليل حجم البناء
-requirements = python3,kivy==2.3.0,kivymd==1.1.1,pillow==10.3.0,opencv-python-headless,numpy,httpx,easyocr
+      # Set up Java 17 required by Gradle
+      - name: Setup Java 17 required by Gradle
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-# (str) Custom source folders for requirements
-# Sets custom source for any requirements with recipes
-# requirements.source.kivy = ../../kivy
+      # Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
 
-# (str) Presplash of the application
-presplash.filename = %(source.dir)s/images/presplash.png
+      # Install pip dependencies
+      - name: Install pip dependencies
+        run: |
+          pip install --upgrade pip
+          pip install buildozer cython==0.29.33
+          pip install opencv-python-headless numpy httpx tensorflow keras-ocr
 
-# (str) Icon of the application
-icon.filename = %(source.dir)s/images/favicon.png
+      # Clean previous builds to avoid conflicts
+      - name: Clean previous builds
+        run: buildozer android clean
 
-# (list) Supported orientations
-# Valid options are: landscape, portrait, portrait-reverse or landscape-reverse
-orientation = portrait
+      # Build with Buildozer and save logs
+      - name: Build with Buildozer
+        run: |
+          yes | buildozer -v android debug 2>&1 | tee build.log
 
-# (list) List of permissions required by the app
-android.permissions = INTERNET, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE, CAMERA
+      # Upload the APK artifact
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: APK
+          path: bin/*.apk
 
-# (list) The Android archs to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
-# تقليل عدد المعماريات لدعمها فقط حيث تتركز أغلب الأجهزة الحديثة على arm64-v8a و armeabi-v7a
-android.archs = arm64-v8a, armeabi-v7a
-
-# (bool) enables Android auto backup feature (Android API >=23)
-android.allow_backup = True
-
-# (str) The format used to package the app for debug mode (apk or aar).
-android.debug_artifact = apk
-
-# Use a specific NDK version for compatibility
-android.ndk = 21d
-
-# Exclude unnecessary files from being included in the APK to reduce its size
-android.include_exts = .so
-
-[buildozer]
-
-# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
-# تقليل مستوى السجلات لتقليل حجم ملف السجل
-log_level = 1
-
-# (int) Display warning if buildozer is run as root (0 = False, 1 = True)
-warn_on_root = 1
-
-# Specify extra arguments to python-for-android to optimize the build process
-p4a.extra_args = --arch=armeabi-v7a --arch=arm64-v8a --requirements=python3,kivy,kivymd,pillow,opencv-python-headless,numpy,httpx,easyocr
-
-# (str) Path to build artifact storage, absolute or relative to spec file
-# build_dir = ./.buildozer
-
-# (str) Path to build output (i.e. .apk, .aab, .ipa) storage
-# bin_dir = ./bin
-
-#    --------------------------------------------------------------------------
-#    List as sections
-#
-#    You can define all the "list" as [section:key].
-#    Each line will be considered as an option to the list.
-#    Let's take [app] / source.exclude_patterns.
-#    Instead of doing:
-#
-# [app]
-# source.exclude_patterns = license,data/audio/*.wav,data/images/original/*
-#
-#    This can be translated into:
-#
-# [app:source.exclude_patterns]
-# license
-# data/audio/*.wav
-# data/images/original/*
-#
-
-#    --------------------------------------------------------------------------
-#    Profiles
-#
-#    You can extend section / key with a profile
-#    For example, you want to deploy a demo version of your application without
-#    HD content. You could first change the title to add "(demo)" in the name
-#    and extend the excluded directories to remove the HD content.
-#
-# [app@demo]
-# title = My Application (demo)
-#
-# [app:source.exclude_patterns@demo]
-# images/hd/*
-#
-#    Then, invoke the command line with the "demo" profile:
-#
-# buildozer --profile demo android debug
+      # Upload Build Log if the build fails
+      - name: Upload Build Log
+        if: failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: build-log
+          path: build.log
