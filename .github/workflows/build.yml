@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      # Used to cache dependencies with a timeout
+      # Use caching to speed up builds
       - name: Get Date
         id: get-date
         run: |
@@ -83,14 +83,14 @@ jobs:
       - name: Setup Java 17 required by Gradle
         uses: actions/setup-java@v3
         with:
-          distribution: 'temurin'  # or 'zulu', 'liberica', etc.
+          distribution: 'temurin'
           java-version: '17'
 
       # Set up Python
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.8' #set your python version
+          python-version: '3.8'
 
       # Install pip dependencies
       - name: Install pip dependencies
@@ -99,15 +99,26 @@ jobs:
           pip install buildozer cython==0.29.33
           pip install opencv-python-headless numpy httpx easyocr
 
-      # Build with Buildozer
-      - name: Build with Buildozer
-        id: buildozer
-        run: |
-          yes | buildozer -v android debug
+      # Clean previous builds to avoid conflicts
+      - name: Clean previous builds
+        run: buildozer android clean
 
-      # Upload artifacts
+      # Build with Buildozer and save logs
+      - name: Build with Buildozer
+        run: |
+          yes | buildozer -v android debug 2>&1 | tee build.log
+
+      # Upload the APK artifact
       - name: Upload APK artifact
         uses: actions/upload-artifact@v2
         with:
-          name: package
+          name: APK
           path: bin/*.apk
+
+      # Upload Build Log if the build fails
+      - name: Upload Build Log
+        if: failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: build-log
+          path: build.log
