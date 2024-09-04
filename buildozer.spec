@@ -1,5 +1,13 @@
 [app]
 
+# باقي الإعدادات كما هي...
+
+# استخدام الإصدار المحدد من NDK (25b أو أحدث)
+android.ndk = 25b
+
+# باقي الإعدادات كما هي...
+
+
 # (str) Title of your application
 title = My Captcha Solver
 
@@ -58,3 +66,6 @@ log_level = 1
 
 # (int) Display warning if buildozer is run as root (0 = False, 1 = True)
 warn_on_root = 1
+
+# باقي الإعدادات كما هي...
+
