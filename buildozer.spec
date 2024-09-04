@@ -56,8 +56,6 @@ android.allow_backup = True
 # (str) The format used to package the app for debug mode (apk or aar).
 android.debug_artifact = apk
 
-# Use a specific NDK version for compatibility
-android.ndk = 21d
 
 [buildozer]
 
